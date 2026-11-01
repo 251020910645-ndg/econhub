@@ -1108,6 +1108,34 @@ function renderReview() {
     $("#rn").onclick = drawQuizQuestion;
   }
   drawQuizQuestion();
+  
+  window.onkeydown = (e) => {
+    // Chỉ chạy khi đang ở màn hình Ôn thuật ngữ
+    if (!$("#v-review")?.classList.contains("on")) return;
+    
+    // Bỏ qua nếu đang gõ chữ trong ô input/textarea
+    if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+
+    if (reviewMode === "cards") {
+      // Điều khiển Flashcards
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        $("#rFlash")?.querySelector('[data-d="-1"]')?.click();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        $("#rFlash")?.querySelector('[data-d="1"]')?.click();
+      } else if (e.key === " " || e.key === "Spacebar" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        $("#rFlash")?.querySelector(".flash")?.click();
+      }
+    } else if (reviewMode === "quiz") {
+      // Chuyển câu Quiz nhanh bằng Mũi tên phải
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        $("#rn")?.click();
+      }
+    }
+  };
 }
 
 /* ================= TIẾN ĐỘ ================= */
