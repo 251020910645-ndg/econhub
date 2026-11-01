@@ -865,7 +865,7 @@ function renderAdm(){
   <label>Key terms (mỗi dòng: english = tiếng Việt = giải nghĩa tiếng Anh)<textarea name="terms" placeholder="demand = cầu = Quantity buyers want at each price."></textarea></label>
   <label>Summary<textarea name="sum"></textarea></label>
 
-  <label>Danh sách câu hỏi trắc nghiệm (Mỗi câu cách nhau bởi dòng trống. Thêm đúng vào sau đáp án đúng)
+  <label>Danh sách câu hỏi trắc nghiệm (mỗi câu cách nhau 1 dòng trống; ghi "đúng" ở cuối đáp án đúng)
     <textarea name="questions" style="min-height:160px;" placeholder="Câu hỏi 1?
 A. Đáp án A
 B. Đáp án B (đúng)
@@ -975,9 +975,11 @@ async function saveLesson(e) {
       const opts = [];
       let correctIdx = 0;
       
+      const MARK = /\s*[\(\[]?\s*(đúng|dung|correct)\s*[\)\]]?\s*$/i;
       lines.slice(1).forEach((line, idx) => {
-        let isCorrect = line.includes("(đúng)") || line.includes("(correct)");
-        let cleanOpt = line.replace(/^[A-D][.\s-]*/i, "").replace(/\((đúng|correct)\)/i, "").trim();
+        let isCorrect = MARK.test(line) || /^\*/.test(line);
+        // Chỉ bỏ nhãn "A." "A)" "A:" "A -" ở đầu dòng; KHÔNG cắt chữ cái đầu của đáp án (vd. "A firm…", "Buying…")
+        let cleanOpt = line.replace(/^\*\s*/, "").replace(MARK, "").replace(/^[A-Da-d]\s*[.):]\s*|^[A-Da-d]\s+-\s+/, "").trim();
         opts.push(cleanOpt);
         if (isCorrect) correctIdx = idx;
       });
