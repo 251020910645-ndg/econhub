@@ -187,17 +187,119 @@ nav.tabbar a[aria-current="page"]{color:var(--brand)}
 .p-card .explanation.show{display:block}
 
 /* Flashcard */
-.flash{position:relative;width:100%;height:220px;perspective:1000px;border:0;background:none;padding:0;cursor:pointer}
-.flash .face{position:absolute;inset:0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:transform .45s;border:1px solid var(--line)}
-.flash .front{background:var(--card)}
-.flash .front b{font-size:clamp(22px,5vw,30px);font-weight:800}
-.flash .back{background:var(--brand);color:#fff;transform:rotateY(180deg);border-color:var(--brand)}
-.flash .back b{font-size:20px}
-.flash .back span{opacity:.9;font-size:14px;margin-top:6px;max-width:44ch}
-.flash .hint{position:absolute;bottom:12px;font-size:12px;color:var(--mute)}
-.flash .back .hint{color:rgba(255,255,255,.75)}
-.flash.flip .front{transform:rotateY(-180deg)}
-.flash.flip .back{transform:rotateY(0)}
+/* Flashcard kiểu Quizlet 3D mượt mà */
+.flash {
+  position: relative;
+  width: 100%;
+  min-height: 260px;
+  perspective: 1200px; /* Tạo chiều sâu 3D */
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+}
+.flash .face {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  text-align: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Hiệu ứng xoay lật 3D mượt như Quizlet */
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1), box-shadow 0.3s ease;
+  border: 1px solid var(--line);
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transform-style: preserve-3d;
+}
+.flash:hover .face {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); /* Đổ bóng nhẹ khi rê chuột */
+}
+
+/* Mặt trước */
+.flash .front {
+  background: var(--card);
+  transform: rotateY(0deg);
+}
+.flash .front b {
+  font-size: clamp(20px, 4vw, 26px);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+  margin: auto 0;
+}
+
+/* Mặt sau */
+.flash .back {
+  background: var(--brand);
+  color: #ffffff;
+  transform: rotateY(180deg);
+  border-color: var(--brand);
+}
+.flash .back b {
+  font-size: 18px;
+  margin-top: 8px;
+  font-weight: 700;
+}
+.flash .back span:not(.hint) {
+  opacity: 0.95;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 90%;
+  overflow-y: auto;
+  max-height: 140px;
+  margin: auto 0;
+}
+
+/* Gợi ý phía dưới */
+.flash .hint {
+  position: relative;
+  font-size: 12px;
+  color: var(--mute);
+  margin-top: auto;
+  padding-top: 8px;
+}
+.flash .back .hint {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Trạng thái Lật thẻ */
+.flash.flip .front {
+  transform: rotateY(-180deg);
+}
+.flash.flip .back {
+  transform: rotateY(0deg);
+}
+
+/* Hiệu ứng lướt chuyển thẻ (Slide Animation) */
+.flash-slide-left {
+  animation: slideLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.flash-slide-right {
+  animation: slideRight 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideLeft {
+  0% { transform: translateX(40px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideRight {
+  0% { transform: translateX(-40px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+.iconbtn.active-tool {
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-color: var(--brand);
+}
+
 :root[data-theme="dark"] .flash .back{color:#0E1726}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .flash .back{color:#0E1726}}
 .fcrow{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:14px}
@@ -222,7 +324,33 @@ nav.tabbar a[aria-current="page"]{color:var(--brand)}
 .cprog .row div:first-child{display:flex;justify-content:space-between;font-size:14px;font-weight:600}
 .pbar{height:10px;border-radius:5px;background:var(--soft);overflow:hidden}
 .pbar i{display:block;height:100%;border-radius:5px;transition:width .4s}
-
+/* Tab chọn chế độ học Flashcard / Quiz */
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+.mode-tab {
+  border: 0;
+  background: none;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--mute);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all .2s;
+}
+.mode-tab:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+.mode-tab.active {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
 /* Admin */
 .adm-form{display:grid;gap:12px;padding:18px;margin:0 0 20px}
 .adm-form label{display:grid;gap:4px;font-weight:600;font-size:14px}
@@ -330,15 +458,23 @@ footer a{color:var(--mute)}
   <section class="view" id="v-review" aria-labelledby="h-review">
     <h1 id="h-review" style="font-size:clamp(22px,4vw,30px);margin-bottom:6px">Ôn thuật ngữ</h1>
     <p class="mute" style="margin:0 0 16px">Thuật ngữ được lấy từ chính các bài giảng. Những từ bạn trả lời sai trong quiz sẽ vào mục <b>Cần ôn</b>.</p>
+    <!-- Bộ lọc học phần -->
     <div class="chips" id="rFilters" role="group" aria-label="Lọc thuật ngữ"></div>
-    <div class="two" style="margin-top:14px">
-      <div class="card stage">
-        <h2 style="font-size:18px">Flashcards</h2>
-        <p class="goal">Bấm vào thẻ để lật.</p>
+    
+    <div class="card stage" style="margin-top:14px">
+      <!-- Thanh chuyển đổi chọn 1 trong 2 chế độ -->
+      <div class="mode-tabs" role="tablist">
+        <button class="mode-tab active" id="tabFlash" role="tab">Flashcards</button>
+        <button class="mode-tab" id="tabQuiz" role="tab">Quiz nhanh</button>
+      </div>
+
+      <!-- Khung hiển thị Flashcards -->
+      <div id="boxFlash">
         <div id="rFlash"></div>
       </div>
-      <div class="card stage">
-        <h2 style="font-size:18px">Quiz nhanh</h2>
+
+      <!-- Khung hiển thị Quiz nhanh -->
+      <div id="boxQuiz" style="display:none">
         <p class="goal" id="rQgoal">Chọn thuật ngữ tiếng Anh đúng.</p>
         <div id="rQuiz"></div>
       </div>
@@ -646,18 +782,127 @@ function stCheck(el){
   drawQ();
 }
 
-function flashWidget(host,terms,onFlip){
-  let i=0;
-  function draw(){
-    if(!terms.length){host.innerHTML='<p class="mute">Chưa có thuật ngữ để ôn.</p>';return}
-    const t=terms[i];
-    host.innerHTML=`<button class="flash" aria-label="Thẻ: ${esc(t.en)}. Bấm để lật"><div class="face front"><b lang="en">${esc(t.en)}</b><span class="hint">Bấm để xem nghĩa</span></div><div class="face back"><b>${esc(t.vi)}</b>${t.def?`<span lang="en">${esc(t.def)}</span>`:""}<span class="hint">Bấm để lật lại</span></div></button>
-    <div class="fcrow"><button class="iconbtn" data-d="-1" aria-label="Thẻ trước"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><span class="c">${i+1} / ${terms.length}</span><button class="iconbtn" data-d="1" aria-label="Thẻ tiếp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button></div>`;
-    host.querySelector(".flash").onclick=e=>{e.currentTarget.classList.toggle("flip");SFX.flip();onFlip&&onFlip()};
-    host.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{i=(i+ +b.dataset.d+terms.length)%terms.length;draw()});
+function flashWidget(host, terms, onFlip) {
+  if (!terms || !terms.length) {
+    host.innerHTML = '<p class="mute">Chưa có thuật ngữ để ôn.</p>';
+    return;
+  }
+
+  let deck = [...terms];
+  let i = 0;
+  let isAuto = false;
+  let isShuffled = false;
+  let autoTimer = null;
+
+  function clearAuto() {
+    if (autoTimer) {
+      clearTimeout(autoTimer);
+      autoTimer = null;
+    }
+  }
+
+  function startAutoLoop() {
+    clearAuto();
+    if (!isAuto) return;
+
+    autoTimer = setTimeout(() => {
+      const cardBtn = host.querySelector(".flash");
+      if (cardBtn && !cardBtn.classList.contains("flip")) {
+        cardBtn.classList.add("flip");
+        SFX.flip();
+      }
+
+      autoTimer = setTimeout(() => {
+        i = (i + 1) % deck.length;
+        draw(1);
+        startAutoLoop();
+      }, 3500);
+    }, 3000);
+  }
+
+  function draw(direction = 0) {
+    const t = deck[i];
+    const slideClass = direction > 0 ? 'flash-slide-left' : direction < 0 ? 'flash-slide-right' : '';
+
+    host.innerHTML = `
+      <button class="flash ${slideClass}" aria-label="Thẻ: ${esc(t.en)}. Bấm để lật">
+        <div class="face front">
+          <b lang="en">${esc(t.en)}</b>
+          <span class="hint">Bấm vào thẻ để xem nghĩa</span>
+        </div>
+        <div class="face back">
+          <b>${esc(t.vi)}</b>
+          ${t.def ? `<span lang="en">${esc(t.def)}</span>` : ""}
+          <span class="hint">Bấm vào thẻ để lật lại</span>
+        </div>
+      </button>
+
+      <!-- Thanh điều hướng dồn nút Play, Shuffle, Arrow về cùng 1 hàng -->
+      <div class="fcrow" style="position:relative; margin-top:16px;">
+        <!-- Nút Play & Shuffle nằm góc bên trái -->
+        <div style="position:absolute; left:0; display:flex; gap:8px;">
+          <button class="iconbtn ${isAuto ? 'active-tool' : ''}" id="btnAuto" title="${isAuto ? 'Dừng tự động' : 'Tự động chạy'}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
+              ${isAuto ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' : '<polygon points="5 3 19 12 5 21 5 3"/>'}
+            </svg>
+          </button>
+          <button class="iconbtn ${isShuffled ? 'active-tool' : ''}" id="btnShuffle" title="Trộn thứ tự thẻ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
+              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Cụm mũi tên và số đếm nằm chính giữa -->
+        <button class="iconbtn" data-d="-1" aria-label="Thẻ trước">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="c" style="min-width:60px; text-align:center;">${i + 1} / ${deck.length}</span>
+        <button class="iconbtn" data-d="1" aria-label="Thẻ tiếp">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>`;
+
+    const cardBtn = host.querySelector(".flash");
+    cardBtn.onclick = () => {
+      cardBtn.classList.toggle("flip");
+      SFX.flip();
+      if (onFlip) onFlip();
+    };
+
+    host.querySelectorAll("[data-d]").forEach(b => b.onclick = () => {
+      clearAuto();
+      const dir = +b.dataset.d;
+      i = (i + dir + deck.length) % deck.length;
+      draw(dir);
+      if (isAuto) startAutoLoop();
+    });
+
+    host.querySelector("#btnShuffle").onclick = () => {
+      clearAuto();
+      isShuffled = !isShuffled;
+      deck = isShuffled ? shuffle(terms) : [...terms];
+      i = 0;
+      draw(0);
+      toast(isShuffled ? "Đã trộn thứ tự thẻ!" : "Đã khôi phục thứ tự ban đầu.");
+      if (isAuto) startAutoLoop();
+    };
+
+    host.querySelector("#btnAuto").onclick = () => {
+      isAuto = !isAuto;
+      if (isAuto) {
+        toast("Đã bật tự động phát!");
+        startAutoLoop();
+      } else {
+        clearAuto();
+        toast("Đã tắt tự động phát.");
+      }
+      draw(0);
+    };
   }
   draw();
 }
+
 function stCards(el){
   el.innerHTML=head()+'<div id="lfc"></div>'+navBtns();wireNav();
   flashWidget($("#lfc"),(L.terms||[]).map(t=>({en:t[0],vi:t[1],def:t[2]})));
@@ -756,27 +1001,113 @@ function renderPractice() {
 }
 
 /* ================= ÔN THUẬT NGỮ ================= */
-let rf="all";
-function renderReview(){
-  const weakN=TERMS.filter(t=>P.weak[t.en]).length;
-  const opts=[["all","Tất cả",TERMS.length],["weak","Cần ôn",weakN],...COURSES.map(c=>[c,courseVi(c),TERMS.filter(t=>t.course===c).length])];
-  $("#rFilters").innerHTML=opts.map(([v,t,k])=>`<button class="chip" aria-pressed="${rf===v}" data-v="${esc(v)}">${esc(t)}<span class="n">${k}</span></button>`).join("");
-  $$("#rFilters .chip").forEach(b=>b.onclick=()=>{rf=b.dataset.v;renderReview()});
-  const uniq=[];const seen=new Set();TERMS.forEach(t=>{if(!seen.has(t.en)){seen.add(t.en);uniq.push(t)}});
-  const list=uniq.filter(t=>rf==="all"||(rf==="weak"?P.weak[t.en]:t.course===rf));
-  if(rf==="weak"&&!list.length){$("#rFlash").innerHTML='<p class="mute">Chưa có từ nào cần ôn. Làm quiz ở cuối mỗi bài để hệ thống ghi nhận từ bạn hay nhầm.</p>';$("#rQuiz").innerHTML="";return}
-  flashWidget($("#rFlash"),list);
-  let sc=0,tot=0;
-  function q(){
-    if(new Set(uniq.map(x=>x.en)).size<4||!list.length){$("#rQuiz").innerHTML='<p class="mute">Cần ít nhất 4 thuật ngữ để tạo quiz.</p>';return}
-    const t=list[Math.floor(Math.random()*list.length)],Q=makeQuestion(t,uniq);
-    $("#rQuiz").innerHTML=`<p class="mute" style="font-size:13px;margin:0 0 4px">${Q.kind}</p><p class="q">${esc(Q.prompt)}</p><div id="ro">${optsHTML(Q.opts)}</div><div class="nav"><span class="mute" style="align-self:center">${tot?`Đúng ${sc}/${tot}`:""}</span><button class="btn ghost" id="rn">Câu khác →</button></div>`;
-    $$("#ro .opt").forEach(b=>b.onclick=()=>{const right=Q.opts[+b.dataset.i]===Q.ans;tot++;$$("#ro .opt").forEach(x=>{x.disabled=true;if(Q.opts[+x.dataset.i]===Q.ans)x.classList.add("ok")});
-      if(right){sc++;SFX.ok();if(P.weak[Q.ans]){delete P.weak[Q.ans];saveP()}}else{b.classList.add("no");SFX.no();P.weak[Q.ans]=(P.weak[Q.ans]||0)+1;saveP()}
-      $("#rQuiz .nav span").textContent=`Đúng ${sc}/${tot}`});
-    $("#rn").onclick=q;
+let rf = "all";
+let reviewMode = "cards";
+
+function renderReview() {
+  const weakN = TERMS.filter(t => P.weak[t.en]).length;
+  const opts = [
+    ["all", "Tất cả", TERMS.length],
+    ["weak", "Cần ôn", weakN],
+    ...COURSES.map(c => [c, courseVi(c), TERMS.filter(t => t.course === c).length])
+  ];
+  
+  // 1. Vẽ các nút lọc học phần (Chips)
+  $("#rFilters").innerHTML = opts.map(([v, t, k]) => 
+    `<button class="chip" aria-pressed="${rf === v}" data-v="${esc(v)}">${esc(t)}<span class="n">${k}</span></button>`
+  ).join("");
+  
+  $$("#rFilters .chip").forEach(b => b.onclick = () => {
+    rf = b.dataset.v;
+    renderReview();
+  });
+
+  // 2. Lọc danh sách thuật ngữ
+  const uniq = [];
+  const seen = new Set();
+  TERMS.forEach(t => {
+    if (!seen.has(t.en)) {
+      seen.add(t.en);
+      uniq.push(t);
+    }
+  });
+
+  const list = uniq.filter(t => rf === "all" || (rf === "weak" ? P.weak[t.en] : t.course === rf));
+
+  // 3. Xử lý chuyển Tab Flashcard / Quiz
+  const tabF = $("#tabFlash"), tabQ = $("#tabQuiz");
+  const boxF = $("#boxFlash"), boxQ = $("#boxQuiz");
+
+  function switchMode(mode) {
+    reviewMode = mode;
+    if (mode === "cards") {
+      tabF?.classList.add("active");
+      tabQ?.classList.remove("active");
+      if (boxF) boxF.style.display = "block";
+      if (boxQ) boxQ.style.display = "none";
+    } else {
+      tabQ?.classList.add("active");
+      tabF?.classList.remove("active");
+      if (boxQ) boxQ.style.display = "block";
+      if (boxF) boxF.style.display = "none";
+    }
   }
-  q();
+
+  if (tabF && tabQ) {
+    tabF.onclick = () => switchMode("cards");
+    tabQ.onclick = () => switchMode("quiz");
+    switchMode(reviewMode);
+  }
+
+  if (rf === "weak" && !list.length) {
+    $("#rFlash").innerHTML = '<p class="mute">Chưa có từ nào cần ôn. Làm quiz ở cuối mỗi bài để hệ thống ghi nhận từ bạn hay nhầm.</p>';
+    $("#rQuiz").innerHTML = '<p class="mute">Chưa có từ nào cần ôn.</p>';
+    return;
+  }
+
+  // Khởi tạo giao diện Flashcard
+  flashWidget($("#rFlash"), list);
+
+  // Khởi tạo giao diện Quiz nhanh
+  let sc = 0, tot = 0;
+  function drawQuizQuestion() {
+    if (new Set(uniq.map(x => x.en)).size < 4 || !list.length) {
+      $("#rQuiz").innerHTML = '<p class="mute">Cần ít nhất 4 thuật ngữ để tạo quiz.</p>';
+      return;
+    }
+    const t = list[Math.floor(Math.random() * list.length)];
+    const Q = makeQuestion(t, uniq);
+    $("#rQuiz").innerHTML = `
+      <p class="mute" style="font-size:13px;margin:0 0 4px">${Q.kind}</p>
+      <p class="q">${esc(Q.prompt)}</p>
+      <div id="ro">${optsHTML(Q.opts)}</div>
+      <div class="nav" style="justify-content: flex-end;">
+        <button class="btn ghost" id="rn">Câu khác →</button>
+      </div>`;
+
+    $$("#ro .opt").forEach(b => b.onclick = () => {
+      const right = Q.opts[+b.dataset.i] === Q.ans;
+      tot++;
+      $$("#ro .opt").forEach(x => {
+        x.disabled = true;
+        if (Q.opts[+x.dataset.i] === Q.ans) x.classList.add("ok");
+      });
+
+      if (right) {
+        sc++;
+        SFX.ok();
+        if (P.weak[Q.ans]) { delete P.weak[Q.ans]; saveP(); }
+      } else {
+        b.classList.add("no");
+        SFX.no();
+        P.weak[Q.ans] = (P.weak[Q.ans] || 0) + 1;
+        saveP();
+      }
+    });
+
+    $("#rn").onclick = drawQuizQuestion;
+  }
+  drawQuizQuestion();
 }
 
 /* ================= TIẾN ĐỘ ================= */
