@@ -924,11 +924,23 @@ function editLesson(id){
   $("#af").scrollIntoView({behavior:"smooth"});
 }
 
+function videoPathFromUrl(url){
+  const m=(url||"").match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+  return m && m[1]===CFG.bucket ? decodeURIComponent(m[2].split("?")[0]) : null;
+}
+
 async function delLesson(id){
   if(!confirm("Xóa bài giảng này?"))return;
+  const l=LESSONS.find(x=>x.id===id);
+  const path=videoPathFromUrl(l&&l.videoUrl);
   const r=await sb.from("lessons").delete().eq("id",id);
   if(r.error)return toast("Lỗi: "+r.error.message);
-  toast("Đã xóa bài");await loadData();
+  if(path){
+    const {data,error}=await sb.storage.from(CFG.bucket).remove([path]);
+    if(error||!data||!data.length) toast("Đã xóa bài nhưng chưa xóa được video (kiểm tra policy Delete)",8000);
+    else toast("Đã xóa bài và video");
+  } else toast("Đã xóa bài");
+  await loadData();
 }
 
 async function saveLesson(e) {
