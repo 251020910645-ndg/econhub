@@ -12,19 +12,19 @@
 <style>
 :root{
   --bg:#F5F7FA;--card:#FFFFFF;--ink:#13233D;--mute:#5A6A80;--line:#DCE3EB;--soft:#EEF2F7;
-  --brand:#1D3278;--brand-d:#14245A;--brand-soft:#E6EBF8;--amber:#E9A520;--amber-soft:#FDF3DC;
+  --brand:#1D3278;--brand-d:#14245A;--brand-soft:#E6EBF8;--amber:#FFA41B;--amber-soft:#FDF3DC;
   --ok:#17784A;--ok-soft:#E3F4EA;--bad:#B3392F;--bad-soft:#FBE9E7;
-  --c0:#1D3278;--c1:#0F7C7A;--c2:#B76E00;--grid:#E4EAF0;
+  --c0:#0C1E5E;--c1:#1F488B;--c2:#FFA41B;--grid:#E4EAF0;
   --r:14px;--shadow:0 1px 2px rgba(19,35,61,.06),0 4px 16px rgba(19,35,61,.05);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0E1726;--card:#162236;--ink:#E7EDF5;--mute:#9FB0C4;--line:#29384F;--soft:#1C2A40;
-  --brand:#8FA8FF;--brand-d:#B3C4FF;--brand-soft:#1E2B4A;--amber:#F2B840;--amber-soft:#3A2F14;
-  --ok:#5BD196;--ok-soft:#173528;--bad:#FF8A7D;--bad-soft:#3D1F1C;--c0:#8FA8FF;--c1:#4FD1C5;--c2:#F2B840;--grid:#1B2D45;--shadow:none}}
+  --brand:#8FA8FF;--brand-d:#B3C4FF;--brand-soft:#1E2B4A;--amber:#FFA41B;--amber-soft:#3A2F14;
+  --ok:#5BD196;--ok-soft:#173528;--bad:#FF8A7D;--bad-soft:#3D1F1C;--c0:#8FA8FF;--c1:#4FD1C5;--c2:#FFA41B;--grid:#1B2D45;--shadow:none}}
 :root[data-theme="dark"]{
   --bg:#0E1726;--card:#162236;--ink:#E7EDF5;--mute:#9FB0C4;--line:#29384F;--soft:#1C2A40;
-  --brand:#8FA8FF;--brand-d:#B3C4FF;--brand-soft:#1E2B4A;--amber:#F2B840;--amber-soft:#3A2F14;
-  --ok:#5BD196;--ok-soft:#173528;--bad:#FF8A7D;--bad-soft:#3D1F1C;--c0:#8FA8FF;--c1:#4FD1C5;--c2:#F2B840;--grid:#1B2D45;--shadow:none}
+  --brand:#8FA8FF;--brand-d:#B3C4FF;--brand-soft:#1E2B4A;--amber:#FFA41B;--amber-soft:#3A2F14;
+  --ok:#5BD196;--ok-soft:#173528;--bad:#FF8A7D;--bad-soft:#3D1F1C;--c0:#8FA8FF;--c1:#4FD1C5;--c2:#FFA41B;--grid:#1B2D45;--shadow:none}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
@@ -495,7 +495,7 @@ footer a{color:var(--mute)}
   <!-- ========== QUẢN TRỊ (ẩn khỏi menu) ========== -->
   <section class="view" id="v-admin">
     <h1 style="font-size:26px;margin-bottom:6px">Khu vực nhóm biên soạn</h1>
-    <p class="mute" style="margin:0 0 16px">Đăng, sửa và xóa bài học. Chỉ tài khoản quản trị mới đăng nhập được.</p>
+    <p class="mute" style="margin:0 0 16px">Đăng, sửa và xóa bài học và bài tập. Chỉ tài khoản quản trị mới đăng nhập được.</p>
     <div id="admBox"></div>
   </section>
 </main>
@@ -944,6 +944,17 @@ function finish(r){
 
 /* ================= BÀI TẬP / KIỂM TRA ================= */
 let currentExamCourse = "Microeconomics", examTimer = null, timeLeft = 900;
+let pendingEditEx = null;
+let EX_ROWS = [], exErr = null, exReady = false, currentExamId = null, admTab = "lessons";
+const fromEx = r => ({ id: r.id, course: r.course, title: r.title, mcq: r.mcq || [], essay: r.essay || [] });
+/* Danh sách đề của 1 học phần: ưu tiên dữ liệu trên Supabase; nếu chưa có bảng/chưa có đề nào thì dùng đề mẫu trong code */
+function getExams(course) {
+  if (!exErr && EX_ROWS.length) return EX_ROWS.filter(x => x.course === course);
+  const b = EXAMS[course];
+  return b ? [{ id: "builtin-" + course, course, title: b.title, mcq: b.mcq, essay: b.essay, raw: true }] : [];
+}
+const fmtExp = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+const expOut = (q, raw) => raw ? q.exp : (q.exp ? "<b>Lời giải chi tiết:</b> " + fmtExp(q.exp) : "");
 
 function renderPractice() {
   $("#pCourseFilters").innerHTML = COURSE_ORDER.map(c => 
@@ -955,12 +966,25 @@ function renderPractice() {
     renderPractice();
   });
 
-  const exam = EXAMS[currentExamCourse];
-  if (!exam) return;
+  const box = $("#pExamBox");
+  if (!exReady) { box.innerHTML = '<div class="card p-card"><p class="mute" style="margin:0">Đang tải bài tập…</p></div>'; return; }
+  const list = getExams(currentExamCourse);
+  if (!list.length) { box.innerHTML = '<div class="card p-card"><p class="mute" style="margin:0">Chưa có bài tập cho học phần này.</p></div>'; return; }
+  if (!list.some(x => String(x.id) === String(currentExamId))) currentExamId = list[0].id;
+  const exam = list.find(x => String(x.id) === String(currentExamId));
+  const pickHtml = list.length > 1
+    ? `<div class="chips" id="pExamPick" role="group" aria-label="Chọn bài tập" style="margin-bottom:12px">${list.map(x => `<button class="chip" type="button" aria-pressed="${String(x.id) === String(currentExamId)}" data-id="${esc(x.id)}">${esc(x.title)}</button>`).join("")}</div>`
+    : "";
 
-  let html = `<div class="card p-card">
+  const admBar = (user && isAdmin)
+    ? `<div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;margin-bottom:12px"><span class="mute" style="font-size:13px">Chế độ quản trị:</span>${
+        !exam.raw ? `<button class="btn ghost sm" type="button" id="pxEdit">Sửa bài này</button>` : (!exErr ? `<button class="btn ghost sm" type="button" id="pxSeed">Nhập đề mẫu vào hệ thống để sửa</button>` : "")
+      }<button class="btn sm" type="button" id="pxNew">+ Thêm bài tập</button></div>`
+    : "";
+
+  let html = admBar + pickHtml + `<div class="card p-card">
     <div style="margin-bottom:14px">
-      <h2 style="font-size:18px">${exam.title}</h2>
+      <h2 style="font-size:18px">${esc(exam.title)}</h2>
     </div>
     <form id="examForm">
       <h3 style="font-size:16px;color:var(--brand);margin-bottom:10px">PHẦN 1: TRẮC NGHIỆM</h3>`;
@@ -971,10 +995,10 @@ function renderPractice() {
       ${q.o.map((opt, oi) => `
         <label class="opt" style="cursor:pointer">
           <input type="radio" name="mcq_${i}" value="${oi}">
-          <span><b>${"ABCD"[oi]}.</b> ${esc(opt)}</span>
+          <span><b>${"ABCDEF"[oi]}.</b> ${esc(opt)}</span>
         </label>
       `).join("")}
-      <div class="explanation" id="exp_mcq_${i}">${q.exp}</div>
+      <div class="explanation" id="exp_mcq_${i}">${expOut(q, exam.raw)}</div>
     </div>`;
   });
 
@@ -983,7 +1007,7 @@ function renderPractice() {
     html += `<div style="margin-bottom:16px">
       <p class="q" lang="en">Câu ${i+1}: ${esc(q.q)}</p>
       <textarea class="adm-form" style="width:100%;min-height:80px" placeholder="Nhập bài làm tự luận của bạn vào đây..."></textarea>
-      <div class="explanation" id="exp_essay_${i}">${q.exp}</div>
+      <div class="explanation" id="exp_essay_${i}">${expOut(q, exam.raw)}</div>
     </div>`;
   });
 
@@ -992,6 +1016,11 @@ function renderPractice() {
   </div></form></div>`;
 
   $("#pExamBox").innerHTML = html;
+  const goAdm = id => { admTab = "exercises"; pendingEditEx = id; location.hash = "#/admin"; };
+  if ($("#pxEdit")) $("#pxEdit").onclick = () => goAdm(exam.id);
+  if ($("#pxNew")) $("#pxNew").onclick = () => goAdm(null);
+  if ($("#pxSeed")) $("#pxSeed").onclick = seedExercises;
+  $$("#pExamPick .chip").forEach(b => b.onclick = () => { currentExamId = b.dataset.id; renderPractice(); });
 
   $("#examForm").onsubmit = (e) => {
     e.preventDefault();
@@ -1156,10 +1185,28 @@ const sb = (CFG.url && CFG.key && typeof supabase !== "undefined")
       global: { headers: { 'Cache-Control': 'no-cache, no-store' } }
     }) 
   : null;
-let user=null;
+let user=null, isAdmin=false;
+/* Kiểm tra tài khoản đang đăng nhập có nằm trong bảng admins không (hàm is_admin() trên Supabase).
+   Nếu chưa tạo hàm này thì tạm coi là admin ở giao diện; quyền ghi thật vẫn do policy trên Supabase quyết định. */
+async function checkAdmin(){
+  if(!sb||!user){isAdmin=false;return}
+  try{const r=await sb.rpc("is_admin");isAdmin=r.error?true:r.data===true}catch(e){isAdmin=true}
+}
+function rerenderAuth(){
+  if($("#v-admin").classList.contains("on"))renderAdm();
+  if($("#v-practice").classList.contains("on"))renderPractice();
+}
 const fromRow=r=>({id:r.id,course:r.course,title:r.title,min:r.minutes,videoId:r.video_id||"",videoUrl:r.video_url||"",terms:r.terms||[],sum:r.sum||"",q:r.q||"",o:r.o||[],a:r.a||0,questions:r.questions||[]});
+async function loadExercises(){
+  if(!sb){exErr="chưa kết nối Supabase";EX_ROWS=[];return}
+  try{
+    const r=await sb.from("exercises").select("*").order("id");
+    if(r.error){exErr=r.error.message;EX_ROWS=[]}else{exErr=null;EX_ROWS=r.data.map(fromEx)}
+  }catch(e){exErr=String(e.message||e);EX_ROWS=[]}
+}
 async function loadData(){
-  if(!sb){LESSONS=DEMO;rebuild();route();return}
+  if(!sb){LESSONS=DEMO;await loadExercises();exReady=true;rebuild();route();return}
+  await loadExercises();exReady=true;
   const r=await sb.from("lessons").select("*");
   if(r.error){toast("Không tải được dữ liệu, đang hiển thị bài mẫu.");LESSONS=DEMO}else LESSONS=r.data.length?r.data.map(fromRow):[];
   rebuild();route();
@@ -1200,8 +1247,8 @@ function setupAutoSave() {
 }
 
 window.onbeforeunload = (e) => {
-  const form = $("#af");
-  if (form && (form.elements.title?.value.trim() || form.elements.questions?.value.trim())) {
+  const form = $("#af") || $("#ef");
+  if (form && (form.elements.title?.value.trim() || form.elements.questions?.value.trim() || form.elements.mcq?.value.trim())) {
     e.preventDefault();
     return (e.returnValue = "Bạn có nội dung chưa lưu, bạn có chắc muốn rời đi?");
   }
@@ -1215,8 +1262,22 @@ function renderAdm(){
     $("#lf").onsubmit=async e=>{e.preventDefault();const f=e.target.elements;const r=await sb.auth.signInWithPassword({email:f.em.value,password:f.pw.value});if(r.error)toast("Đăng nhập không được: "+r.error.message)};
     return;
   }
+  if(!isAdmin){
+    b.innerHTML=`<div class="card adm-form" style="max-width:480px"><p style="margin:0"><b>Tài khoản ${esc(user.email)} không có quyền quản trị.</b></p><p class="mute" style="margin:0">Chỉ admin mới được thêm, sửa, xóa bài học và bài tập. Hãy đăng xuất và đăng nhập bằng tài khoản admin.</p><div><button class="btn ghost sm" id="lo">Đăng xuất</button></div></div>`;
+    $("#lo").onclick=()=>sb.auth.signOut();
+    return;
+  }
   b.innerHTML=`<p class="mute">Đang đăng nhập: ${esc(user.email)} <button class="btn ghost sm" id="lo">Đăng xuất</button></p>
-  <form class="card adm-form" id="af"><input type="hidden" name="lid"><input type="hidden" name="old">
+  <div class="mode-tabs" role="tablist" id="admTabs"><button class="mode-tab${admTab==="lessons"?" active":""}" role="tab" data-t="lessons">Thêm bài học</button><button class="mode-tab${admTab==="exercises"?" active":""}" role="tab" data-t="exercises">Thêm bài tập</button></div>
+  <div id="admPane"></div>`;
+  $("#lo").onclick=()=>sb.auth.signOut();
+  $("#admTabs").onclick=e=>{const t=e.target.closest("button");if(!t||t.dataset.t===admTab)return;admTab=t.dataset.t;renderAdm()};
+  if(admTab==="exercises")renderAdmEx();else renderAdmLessons();
+}
+
+function renderAdmLessons(){
+  const b=$("#admPane");
+  b.innerHTML=`<form class="card adm-form" id="af"><input type="hidden" name="lid"><input type="hidden" name="old">
   <div class="adm-2"><label>Tên bài giảng<input name="title" required></label>
   <label>Học phần<select name="course" required>${[...new Set([...COURSE_ORDER,...COURSES])].map(c=>`<option value="${esc(c)}">${esc(courseVi(c))} (${esc(c)})</option>`).join("")}</select></label></div>
   <div class="adm-2"><label>Thời lượng video (phút)<input name="min" type="number" min="1" max="60" value="5" required></label><label>Link YouTube (hoặc ID)<input name="yt" placeholder="https://youtu.be/..."></label></div>
@@ -1225,13 +1286,13 @@ function renderAdm(){
   <label>Summary<textarea name="sum"></textarea></label>
 
   <label>Danh sách câu hỏi trắc nghiệm (mỗi câu cách nhau 1 dòng trống; ghi "đúng" ở cuối đáp án đúng)
-    <textarea name="questions" style="min-height:160px;" placeholder="Câu hỏi 1?
+    <textarea name="questions" style="min-height:160px;" placeholder="Câu hỏi 1
 A. Đáp án A
 B. Đáp án B (đúng)
 C. Đáp án C
 D. Đáp án D
 
-Câu hỏi 2?
+Câu hỏi 2
 A. Đáp án A
 B. Đáp án B
 C. Đáp án C (đúng)
@@ -1241,7 +1302,6 @@ D. Đáp án D"></textarea>
   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" type="submit">Lưu bài</button></div></form>
   <h2 style="font-size:18px;margin:0 0 10px">Bài đã đăng (${LESSONS.length})</h2><div id="al">${LESSONS.map(l=>`<div class="card adm-row"><span>${esc(l.title)} <small class="mute">· ${esc(courseVi(l.course))}${l.videoId||l.videoUrl?"":" · chưa có video"}</small></span><span style="display:flex;gap:6px"><button class="btn ghost sm" data-e="${l.id}">Sửa</button><button class="btn bad sm" data-d="${l.id}">Xóa</button></span></div>`).join("")||'<p class="mute">Chưa có bài nào.</p>'}</div>`;
   
-  $("#lo").onclick=()=>sb.auth.signOut();
   $("#af").onsubmit=saveLesson;
   
   // Tự động kích hoạt lưu nháp & khôi phục dữ liệu
@@ -1389,9 +1449,220 @@ async function saveLesson(e) {
   }
 }
 
+/* ================= BÀI TẬP (bảng "exercises") ================= */
+const EX_DRAFT_KEY = "econhub_admin_ex_draft";
+const EX_SQL = `create table public.exercises (
+  id bigint generated always as identity primary key,
+  course text not null,
+  title text not null,
+  mcq jsonb not null default '[]',
+  essay jsonb not null default '[]',
+  created_at timestamptz default now()
+);
+alter table public.exercises enable row level security;
+create policy "exercises public read" on public.exercises for select using (true);
+create policy "exercises admin write" on public.exercises for all to authenticated using (true) with check (true);`;
+
+const LETTERS = "ABCDEF";
+const OPT_RE = /^\s*\*?\s*[A-Fa-f]\s*[.):]\s*|^\s*\*?\s*[A-Fa-f]\s+-\s+/;
+const MARK_RE = /\s*[\(\[]?\s*(đúng|dung|correct)\s*[\)\]]?\s*$/i;
+const EXP_RE = /^\s*(giải thích|giai thich|lời giải|loi giai|đáp án|dap an|explanation|exp)\s*:\s*/i;
+const QNUM_RE = /^\s*(câu|cau|question|q)\s*\d+\s*[:.)]\s*/i;
+
+const splitBlocks = t => String(t || "").split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+const blockLines = b => b.split("\n").map(l => l.trim()).filter(Boolean);
+
+function parseMcqText(text) {
+  return splitBlocks(text).map((block, bi) => {
+    const lines = blockLines(block);
+    const hasLabels = lines.slice(1).some(l => OPT_RE.test(l));
+    const q = [], o = [], exp = [];
+    let a = -1, mode = "q";
+    lines.forEach((line, i) => {
+      if (mode === "exp") { exp.push(line); return; }
+      if (i > 0 && EXP_RE.test(line)) {
+        mode = "exp";
+        const r = line.replace(EXP_RE, "");
+        if (r) exp.push(r);
+        return;
+      }
+      const isOpt = i > 0 && (hasLabels ? OPT_RE.test(line) : true);
+      if (isOpt) {
+        mode = "o";
+        const correct = MARK_RE.test(line) || /^\s*\*/.test(line);
+        const clean = line.replace(/^\s*\*\s*/, "").replace(MARK_RE, "").replace(OPT_RE, "").trim();
+        o.push(clean);
+        if (correct) {
+          if (a >= 0) throw new Error(`Câu trắc nghiệm ${bi + 1}: có nhiều hơn 1 đáp án được đánh dấu (đúng).`);
+          a = o.length - 1;
+        }
+      } else if (mode === "o") {
+        o[o.length - 1] += " " + line;   
+      } else {
+        q.push(line);
+      }
+    });
+    if (o.length < 2) throw new Error(`Câu trắc nghiệm ${bi + 1}: cần ít nhất 2 đáp án (A., B., ...).`);
+    if (o.length > LETTERS.length) throw new Error(`Câu trắc nghiệm ${bi + 1}: tối đa ${LETTERS.length} đáp án.`);
+    if (a < 0) throw new Error(`Câu trắc nghiệm ${bi + 1}: chưa ghi "(đúng)" ở đáp án đúng.`);
+    return { q: q.join(" ").replace(QNUM_RE, "").trim(), o, a, exp: exp.join("\n") };
+  });
+}
+
+function parseEssayText(text) {
+  return splitBlocks(text).map(block => {
+    const lines = blockLines(block);
+    const rest = lines.slice(1);
+    if (rest.length) rest[0] = rest[0].replace(EXP_RE, "");
+    return { q: lines[0].replace(QNUM_RE, "").trim(), exp: rest.filter(Boolean).join("\n") };
+  });
+}
+
+const oneLine = s => String(s || "").replace(/\s*\n\s*/g, " ");
+const flatExp = s => String(s || "").replace(/\n\s*\n/g, "\n");
+const mcqToText = list => (list || []).map(q =>
+  oneLine(q.q) + "\n" +
+  (q.o || []).map((x, i) => `${LETTERS[i]}. ${oneLine(x)}${i === q.a ? " (đúng)" : ""}`).join("\n") +
+  (q.exp ? "\nGiải thích: " + flatExp(q.exp) : "")
+).join("\n\n");
+const essayToText = list => (list || []).map(q =>
+  oneLine(q.q) + (q.exp ? "\nĐáp án: " + flatExp(q.exp) : "")
+).join("\n\n");
+
+/* Đổi lời giải HTML của đề mẫu sang văn bản thường để lưu vào CSDL */
+const htmlToPlain = s => String(s || "")
+  .replace(/<b>\s*Lời giải chi tiết:\s*<\/b>\s*(<br\s*\/?>)?\s*/i, "")
+  .replace(/<br\s*\/?>/gi, "\n")
+  .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+  .replace(/<[^>]+>/g, "")
+  .trim();
+
+function restoreExDraft() {
+  const d = store.get(EX_DRAFT_KEY, null), form = $("#ef");
+  if (!d || !form) return;
+  const f = form.elements;
+  ["eid", "title", "course", "mcq", "essay"].forEach(k => { if (d[k] != null && f[k]) f[k].value = d[k]; });
+}
+function setupExAutoSave() {
+  const form = $("#ef");
+  if (!form) return;
+  form.oninput = () => {
+    const f = form.elements;
+    store.set(EX_DRAFT_KEY, { eid: f.eid.value, title: f.title.value, course: f.course.value, mcq: f.mcq.value, essay: f.essay.value });
+  };
+}
+
+function renderAdmEx() {
+  const b = $("#admPane");
+  if (exErr) {
+    b.innerHTML = `<div class="card adm-form"><p style="margin:0"><b>Chưa có bảng "exercises" trên Supabase</b> (${esc(exErr)}).</p>
+      <p class="mute" style="margin:0">Vào Supabase → SQL Editor, dán đoạn lệnh dưới đây rồi bấm Run, sau đó tải lại trang:</p>
+      <pre style="white-space:pre-wrap;font-size:12.5px;background:var(--soft);padding:12px;border-radius:8px;margin:0;user-select:all">${esc(EX_SQL)}</pre></div>`;
+    return;
+  }
+  const opts = COURSE_ORDER.map(c => `<option value="${esc(c)}">${esc(courseVi(c))} (${esc(c)})</option>`).join("");
+  const notice = EX_ROWS.length ? "" : `<div class="card adm-form"><p style="margin:0">Hiện chưa có bài tập nào trong hệ thống, nên trang Bài tập đang hiển thị <b>3 đề mẫu có sẵn</b> trong code.</p>
+      <div><button class="btn ghost sm" type="button" id="exSeed">Nhập 3 đề mẫu vào hệ thống để chỉnh sửa</button></div></div>`;
+  b.innerHTML = `${notice}
+  <form class="card adm-form" id="ef"><input type="hidden" name="eid">
+    <div class="adm-2"><label>Tên bài tập<input name="title" required placeholder="VD: Bài tập chương 1"></label>
+    <label>Học phần<select name="course" required>${opts}</select></label></div>
+    <label>Phần 1 – Trắc nghiệm (mỗi câu cách nhau 1 dòng trống; ghi "(đúng)" cuối đáp án đúng; dòng "Giải thích:" là lời giải, không bắt buộc)
+      <textarea name="mcq" style="min-height:220px" placeholder="If nominal interest rate is 8% and inflation is 3%, the real rate is approximately:
+A. 11%
+B. 5% (đúng)
+C. 2.66%
+D. 24%
+Giải thích: Theo công thức Fisher, r ≈ i − π = 8% − 3% = 5%.
+
+Câu hỏi 2
+A. ...
+B. ...
+C. ... (đúng)
+D. ..."></textarea></label>
+    <label>Phần 2 – Tự luận (mỗi câu cách nhau 1 dòng trống; dòng dưới câu hỏi là đáp án/lời giải, không bắt buộc)
+      <textarea name="essay" style="min-height:160px" placeholder="Explain the 3 primary functions of money in a modern economy.
+Đáp án: 1. Medium of Exchange: ...
+2. Unit of Account: ...
+3. Store of Value: ...
+
+Câu tự luận 2
+Đáp án: ..."></textarea></label>
+    <p class="mute" style="margin:0;font-size:13px">Không cần gõ "Câu 1:", hệ thống tự đánh số. Trong lời giải có thể dùng **chữ đậm**.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" type="submit">Lưu bài tập</button><button class="btn ghost" type="button" id="exReset">Xóa form / thêm mới</button></div>
+  </form>
+  <h2 style="font-size:18px;margin:0 0 10px">Bài tập đã đăng (${EX_ROWS.length})</h2>
+  <div id="exl">${EX_ROWS.map(x => `<div class="card adm-row"><span>${esc(x.title)} <small class="mute">· ${esc(courseVi(x.course))} · ${x.mcq.length} trắc nghiệm · ${x.essay.length} tự luận</small></span><span style="display:flex;gap:6px"><button class="btn ghost sm" data-e="${x.id}">Sửa</button><button class="btn bad sm" data-d="${x.id}">Xóa</button></span></div>`).join("")}</div>`;
+
+  $("#ef").onsubmit = saveExercise;
+  $("#exReset").onclick = () => { $("#ef").reset(); $("#ef").elements.eid.value = ""; store.set(EX_DRAFT_KEY, null); };
+  const seed = $("#exSeed"); if (seed) seed.onclick = seedExercises;
+  $("#exl").onclick = e => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.e) editExercise(+t.dataset.e);
+    if (t.dataset.d) delExercise(+t.dataset.d);
+  };
+  setupExAutoSave();
+  restoreExDraft();
+  if (pendingEditEx != null) { const id = pendingEditEx; pendingEditEx = null; editExercise(id); }
+}
+
+function editExercise(id) {
+  const x = EX_ROWS.find(r => r.id === id); if (!x) return;
+  const f = $("#ef").elements;
+  f.eid.value = x.id; f.title.value = x.title; f.course.value = x.course;
+  f.mcq.value = mcqToText(x.mcq); f.essay.value = essayToText(x.essay);
+  f.title.dispatchEvent(new Event("input", { bubbles: true }));
+  $("#ef").scrollIntoView({ behavior: "smooth" });
+}
+
+async function delExercise(id) {
+  if (!confirm("Xóa bài tập này?")) return;
+  const r = await sb.from("exercises").delete().eq("id", id);
+  if (r.error) return toast("Lỗi: " + r.error.message);
+  toast("Đã xóa bài tập");
+  await loadData();
+}
+
+async function saveExercise(e) {
+  e.preventDefault();
+  const f = e.target.elements, btn = e.target.querySelector("[type=submit]");
+  let mcq, essay;
+  try { mcq = parseMcqText(f.mcq.value); essay = parseEssayText(f.essay.value); }
+  catch (err) { return toast(err.message); }
+  if (!mcq.length && !essay.length) return toast("Cần ít nhất 1 câu trắc nghiệm hoặc tự luận.");
+  if (mcq.some(q => !q.q) || essay.some(q => !q.q)) return toast("Có câu chưa có nội dung câu hỏi.");
+  btn.disabled = true;
+  try {
+    const row = { title: f.title.value.trim(), course: f.course.value, mcq, essay };
+    const id = f.eid.value;
+    const r = id ? await sb.from("exercises").update(row).eq("id", +id) : await sb.from("exercises").insert(row);
+    if (r.error) throw r.error;
+    store.set(EX_DRAFT_KEY, null);
+    currentExamCourse = row.course;
+    toast(id ? "Đã cập nhật bài tập!" : "Đã đăng bài tập!");
+    await loadData();
+  } catch (err) {
+    console.error(err);
+    toast("Lỗi: " + (err.message || "không lưu được"));
+  } finally { btn.disabled = false; }
+}
+
+async function seedExercises() {
+  const rows = COURSE_ORDER.filter(c => EXAMS[c]).map(c => ({
+    course: c, title: EXAMS[c].title,
+    mcq: EXAMS[c].mcq.map(q => ({ q: q.q, o: q.o, a: q.a, exp: htmlToPlain(q.exp) })),
+    essay: EXAMS[c].essay.map(q => ({ q: q.q, exp: htmlToPlain(q.exp) }))
+  }));
+  const r = await sb.from("exercises").insert(rows);
+  if (r.error) return toast("Lỗi: " + r.error.message);
+  toast("Đã nhập 3 đề mẫu vào hệ thống.");
+  await loadData();
+}
+
 (async()=>{
   route();
-  if(sb){try{const s=await sb.auth.getSession();user=s.data.session?s.data.session.user:null;sb.auth.onAuthStateChange((_,s)=>{user=s?s.user:null;if($("#v-admin").classList.contains("on"))renderAdm()})}catch(e){}}
+  if(sb){try{const s=await sb.auth.getSession();user=s.data.session?s.data.session.user:null;await checkAdmin();sb.auth.onAuthStateChange((_,s)=>{user=s?s.user:null;isAdmin=false;rerenderAuth();setTimeout(()=>checkAdmin().then(rerenderAuth),0)})}catch(e){}}
   await loadData();
 })();
 </script>
