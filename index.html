@@ -495,7 +495,7 @@ footer a{color:var(--mute)}
   <!-- ========== QUẢN TRỊ (ẩn khỏi menu) ========== -->
   <section class="view" id="v-admin">
     <h1 style="font-size:26px;margin-bottom:6px">Khu vực nhóm biên soạn</h1>
-    <p class="mute" style="margin:0 0 16px">Đăng, sửa và xóa bài học và bài tập. Chỉ tài khoản quản trị mới đăng nhập được.</p>
+    <p class="mute" style="margin:0 0 16px">Chỉ tài khoản quản trị mới có quyền truy cập.</p>
     <div id="admBox"></div>
   </section>
 </main>
@@ -1259,7 +1259,7 @@ function renderAdm(){
   if(!sb){b.innerHTML='<div class="card adm-form"><p class="mute" style="margin:0">Chưa kết nối Supabase. Điền <b>CFG.url</b> và <b>CFG.key</b> trong index.html.</p></div>';return}
   if(!user){
     b.innerHTML='<form class="card adm-form" id="lf" style="max-width:400px"><label>Email quản trị<input name="em" type="email" required autocomplete="username"></label><label>Mật khẩu<input name="pw" type="password" required autocomplete="current-password"></label><button class="btn" type="submit">Đăng nhập</button></form>';
-    $("#lf").onsubmit=async e=>{e.preventDefault();const f=e.target.elements;const r=await sb.auth.signInWithPassword({email:f.em.value,password:f.pw.value});if(r.error)toast("Đăng nhập không được: "+r.error.message)};
+    $("#lf").onsubmit=async e=>{e.preventDefault();const f=e.target.elements;const r=await sb.auth.signInWithPassword({email:f.em.value,password:f.pw.value});if(r.error)toast("Không có quyền đăng nhập")};
     return;
   }
   if(!isAdmin){
